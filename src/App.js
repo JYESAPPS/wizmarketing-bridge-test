@@ -149,30 +149,33 @@ export default function App() {
       </div>
 
       <div className="grid">
-        <CollapseSection id="sec-boot" title="부팅 & Splash · WEB_READY" defaultOpen={true}>
+        <CollapseSection id="sec-boot" title="부팅 & Splash" defaultOpen={true}>
           <BootReadyPage />
-        </CollapseSection>
-
-        <CollapseSection id="sec-back" title="WebView 뒤로가기 처리" defaultOpen={true}>
-          <WebViewBackPage isRoot={false} />
-        </CollapseSection>
-
-        <CollapseSection id="sec-push" title="푸시 알람 테스트" defaultOpen={false}>
-          <PushPage />
         </CollapseSection>
 
         <CollapseSection id="sec-perm" title="권한 테스트" defaultOpen={false}>
           <PermissionPage />
         </CollapseSection>
 
-        <CollapseSection id="sec-auth" title="로그인 테스트" defaultOpen={false}>
-          <AuthPage />
+        <CollapseSection id="sec-back" title="뒤로가기 테스트" defaultOpen={true}>
+          <WebViewBackPage isRoot={false} />
         </CollapseSection>
 
         <CollapseSection id="sec-subscription" title="구독/결제 테스트" defaultOpen={false}>
           <SubscriptionPage />
         </CollapseSection>
 
+
+
+        <CollapseSection id="sec-push" title="푸시 알람 테스트" defaultOpen={false}>
+          <PushPage />
+        </CollapseSection>
+
+        <CollapseSection id="sec-auth" title="로그인 테스트" defaultOpen={false}>
+          <AuthPage />
+        </CollapseSection>
+
+  
         <CollapseSection id="sec-share" title="공유(인스타 등) 테스트" defaultOpen={false}>
           <SharePage />
         </CollapseSection>
