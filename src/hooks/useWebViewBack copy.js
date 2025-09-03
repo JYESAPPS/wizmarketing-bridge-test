@@ -35,23 +35,11 @@ export default function useWebViewBack({ isRoot = false } = {}) {
 
   // ✅ isRoot는 항상 베이스 라우트 기준으로 전송 (override 명시한 경우만 예외)
   const sendNav = useCallback(
-    (
-      hint,
-      hasBlockingUI,
-      needsConfirm,
-      { isRootOverride, canGoBackOverride } = {}
-    ) => {
-      // 라우트 기준 isRoot를 기본값으로 사용 (override 있을 때만 대체)
+    (hint, hasBlockingUI, needsConfirm, { isRootOverride, canGoBackOverride } = {}) => {
       const isRootToSend =
-        typeof isRootOverride === "boolean"
-          ? isRootOverride
-          : baseIsRootRef.current;
-
-      // canGoBackInWeb: override 없으면 자동 감지(window.history)
+        typeof isRootOverride === "boolean" ? isRootOverride : baseIsRootRef.current;
       const canGoBackToSend =
-        typeof canGoBackOverride === "boolean"
-          ? canGoBackOverride
-          : canGoBackInWebAuto;
+        typeof canGoBackOverride === "boolean" ? canGoBackOverride : canGoBackInWebAuto;
 
       notifyNavState({
         isRoot: isRootToSend,
@@ -61,7 +49,7 @@ export default function useWebViewBack({ isRoot = false } = {}) {
         hint,
         context: {
           title: (form.title || "").trim(),
-          scenario: form.mode,                 // detail | home | modal | form 등
+          scenario: form.mode,
           hint: (form.hint || "").trim(),
           count: Number(form.count) || 0,
           at: Date.now(),
@@ -69,16 +57,8 @@ export default function useWebViewBack({ isRoot = false } = {}) {
         },
       });
     },
-    [
-      canGoBackInWebAuto,     // window.history 길이 기반 자동 판단
-      form.title,
-      form.mode,
-      form.hint,
-      form.count,
-      form.useManualFlags,
-    ]
+    [canGoBackInWebAuto, form.title, form.mode, form.hint, form.count, form.useManualFlags]
   );
-
 
   const open = useCallback(() => {
     setIsOpen(true);
@@ -91,23 +71,9 @@ export default function useWebViewBack({ isRoot = false } = {}) {
   const close = useCallback(() => {
     setIsOpen(false);
     setPhase("modal");
-    // ✅ 닫을 때도 라우트 기반 isRoot를 강제
-    sendNav(HINTS.ENTRY, false, false, { isRootOverride: baseIsRootRef.current });
+    // ✅ 모달 닫힘: hasBlockingUI false (isRoot는 베이스 유지)
+    sendNav(HINTS.ENTRY, false, false);
   }, [sendNav]);
-
-  const abort = useCallback(() => {
-    if (runningTimerRef.current) {
-      clearTimeout(runningTimerRef.current);
-      runningTimerRef.current = null;
-    }
-    setPhase("modal");
-    const canGoBackOverride = form.useManualFlags ? !!form.m_canGoBackInWeb : undefined;
-    // ✅ 중단 시에도 라우트 기반 isRoot 강제
-    sendNav(HINTS.MODAL, true, false, {
-      isRootOverride: baseIsRootRef.current,
-      canGoBackOverride,
-    });
-  }, [sendNav, form.useManualFlags, form.m_canGoBackInWeb]);
 
   const setField = useCallback((key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -143,6 +109,17 @@ export default function useWebViewBack({ isRoot = false } = {}) {
     }, 1500);
   }, [errors, form, sendNav]);
 
+  const abort = useCallback(() => {
+    if (runningTimerRef.current) {
+      clearTimeout(runningTimerRef.current);
+      runningTimerRef.current = null;
+    }
+    setPhase("modal");
+
+    const canGoBackOverride = form.useManualFlags ? !!form.m_canGoBackInWeb : undefined;
+    // ✅ 중단 시에도 모달 상태로 복원(베이스 isRoot 유지)
+    sendNav(HINTS.MODAL, true, false, { canGoBackOverride });
+  }, [sendNav, form.useManualFlags, form.m_canGoBackInWeb]);
 
   useEffect(() => () => {
     if (runningTimerRef.current) clearTimeout(runningTimerRef.current);

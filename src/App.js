@@ -142,26 +142,23 @@ export default function App() {
 
   return (
     <div className="wrap">
-      <h1>WizMarketing — BridgeTest (CRA)</h1>
-      <div className="desc">
-        <span className="badge">Web ↔ App 브리지</span>
-        &nbsp; 뒤로가기 / 푸시 / 권한 / 로그인 / 결제 / 공유 테스트용 React 웹
-      </div>
+      <h1>WizMarketing(CRA)</h1>
+
 
       <div className="grid">
-        <CollapseSection id="sec-boot" title="부팅 & Splash" defaultOpen={true}>
+        <CollapseSection id="sec-boot" title="부팅 & Splash[검증완료]" defaultOpen={true}>
           <BootReadyPage />
         </CollapseSection>
 
-        <CollapseSection id="sec-perm" title="권한 테스트" defaultOpen={false}>
+        <CollapseSection id="sec-perm" title="권한 테스트[검증완료]" defaultOpen={false}>
           <PermissionPage />
         </CollapseSection>
 
-        <CollapseSection id="sec-back" title="뒤로가기 테스트" defaultOpen={true}>
-          <WebViewBackPage isRoot={false} />
+        <CollapseSection id="sec-back" title="뒤로가기 테스트[검증완료]" defaultOpen={true}>
+          <WebViewBackPage />
         </CollapseSection>
 
-        <CollapseSection id="sec-subscription" title="구독/결제 테스트" defaultOpen={false}>
+        <CollapseSection id="sec-subscription" title="구독/결제 테스트[검증완료]" defaultOpen={false}>
           <SubscriptionPage />
         </CollapseSection>
 
@@ -181,12 +178,12 @@ export default function App() {
         </CollapseSection>
       </div>
 
-      <h2 style={{ marginTop: 20 }}>종합 로그</h2>
+      {/* <h2 style={{ marginTop: 20 }}>종합 로그</h2>
       <div className="log" ref={logRef}>
         {logs.map((l, i) => (
           <div key={i}>{l}</div>
         ))}
-      </div>
+      </div> */}
     </div>
   );
 }
