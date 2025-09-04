@@ -62,7 +62,7 @@ export default function PushPage() {
 
             <PushModal isOpen={open} onClose={() => setOpen(false)} />
             
-            <LogBox title="푸시 로그" logs={logs} onClear={clear} />
+     
         </div>
     );
 }

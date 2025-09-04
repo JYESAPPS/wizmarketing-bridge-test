@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "wizmarketing-d024d"
-  }
+    "default": "wizad-b69ee",
+    "prod": "wizad-b69ee"
+  },
+  "targets": {},
+  "etags": {}
 }

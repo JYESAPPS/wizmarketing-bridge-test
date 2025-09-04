@@ -1,32 +1,16 @@
 /**
  * 파일명: components/PushModal.jsx
- * 설명: 푸시 알림 테스트 모달(UI). 디바이스 토큰을 수동 입력하고,
- *       App→Web으로 전달될 PUSH_EVENT(payload)를 개발 환경에서 시뮬레이션한다.
- *
- * 주요 기능:
- * - Manual Token 입력/저장(localStorage) + platform(android/ios) 지정
- * - (읽기전용) App에서 수신한 최신 PUSH_TOKEN 표시
- * - 이벤트 시뮬레이터: event(received|clicked), title, body, deeplink, extra(JSON), messageId, ts 구성
- * - 보낼 JSON(Preview) 확인 후 “웹 핸들러로 주입(시뮬레이트)” 버튼으로 window.postMessage 전송
- *   (실제 OS 푸시 발송은 서버에서 수행하며, 본 모달은 웹 핸들러 동작 검증에 초점)
- *
- * 사용 맥락:
- * - RN WebView 기반 앱에서 푸시 수신 후 App→Web 전달 규격(PUSH_EVENT)을 검증
- * - 앱 없이도 브라우저에서 토스트/딥링크 라우팅 등의 웹 처리 로직을 빠르게 재현
- *
- * 연관 메시지 타입:
- * - App → Web: PUSH_TOKEN { token, platform, app_version, install_id, ts }
- * - (시뮬) App → Web: PUSH_EVENT { event, title, body, deeplink, extra, platform, messageId, ts }
- *
- * 비고:
- * - ‘clicked’ 이벤트 테스트 시 deeplink 입력을 권장(라우팅 검증)
- * - extra는 유효한 JSON이어야 하며, 파싱 실패 시 전송 버튼 비활성화
- * - DevTools 등 외부 메시지는 addAppMessageListener 내부에서 필터링 처리
+ * 설명: 푸시 알림 테스트 모달(UI). 디바이스 토큰을 입력하고
+ *       Cloud Functions(sendPush)로 요청 → 서버가 15초 후 실제 푸시 발송.
  */
-
 
 import React, { useEffect, useMemo, useState } from "react";
 import { addAppMessageListener } from "../bridges/appBridge";
+
+// ✅ 프로젝트 함수 URL (프로젝트 ID로 교체)
+const FN_BASE = "https://asia-northeast1-wizad-b69ee.cloudfunctions.net/sendPush";
+// (선택) Functions에 webpush.secret 설정했다면 헤더에 같이 전송
+// const SECRET = "SOME_SECRET";
 
 const drawer = {
     position: "fixed",
@@ -67,16 +51,12 @@ export default function PushModal({ isOpen, onClose }) {
     // 앱에서 보내준 최신 PUSH_TOKEN(읽기 전용 표시용)
     const [latestFromApp, setLatestFromApp] = useState(null); // { token, platform, app_version, ts, install_id }
 
-    // 이벤트 시뮬레이터(앱→웹 메시지를 모의 주입)
-    const [eventType, setEventType] = useState("received"); // received | clicked
+    // 서버 발송에 쓰일 필드
     const [title, setTitle] = useState("새 알림");
-    const [bodyText, setBodyText] = useState(" Wizmarket 에서 푸시알람을 보냈습니다.");
-    const [deeplink, setDeeplink] = useState("/jobs/12345");
-    const [extra, setExtra] = useState('{ "jobId": "12345" }');
-    const [messageId, setMessageId] = useState("");
-    const [ts, setTs] = useState(() => Date.now());
+    const [bodyText, setBodyText] = useState("Wizmarket에서 발송한 테스트 푸시입니다. (15초 지연)");
+    const [sending, setSending] = useState(false);
 
-    // 🔁 애니메이션 트리거 (훅은 항상 호출, 내부에서 isOpen 분기)
+    // 🔁 애니메이션
     useEffect(() => {
         if (isOpen) {
             const t = setTimeout(() => setAnim(true), 10);
@@ -86,7 +66,7 @@ export default function PushModal({ isOpen, onClose }) {
         }
     }, [isOpen]);
 
-    // ✅ 앱에서 PUSH_TOKEN 수신 (항상 훅을 동일 순서로 호출)
+    // ✅ 앱에서 PUSH_TOKEN 수신
     useEffect(() => {
         const unbind = addAppMessageListener((msg, raw) => {
             if (!msg || typeof msg.type !== "string") return;
@@ -105,41 +85,21 @@ export default function PushModal({ isOpen, onClose }) {
         return () => unbind?.();
     }, []);
 
-    // 🧠 보낼 메시지(시뮬레이트) 미리보기 (훅은 return 위에서 호출)
-    const preview = useMemo(() => {
-        let parsedExtra = null;
-        try { parsedExtra = extra ? JSON.parse(extra) : null; } catch { parsedExtra = "__INVALID_JSON__"; }
-        return {
-            type: "PUSH_EVENT",
-            payload: {
-                event: eventType,
-                title: title || undefined,
-                body: bodyText || undefined,
-                deeplink: deeplink || undefined,
-                extra: parsedExtra || undefined,
-                platform: platform || undefined,
-                messageId: messageId || undefined,
-                ts: ts || Date.now(),
-            },
-        };
-    }, [eventType, title, bodyText, deeplink, extra, platform, messageId, ts]);
+    // 미리보기(설명용)
+    const preview = useMemo(() => ({
+        token: manualToken || "(미입력)",
+        title: title || "(제목없음)",
+        body: bodyText || "(본문없음)",
+        platform,
+        note: "서버로 전송 후 15초 뒤 실제 푸시 발송",
+    }), [manualToken, title, bodyText, platform]);
 
-    // ⛔️ 여기서부터는 훅이 없으니 초기 return null 해도 안전
     if (!isOpen) return null;
 
     const panelStyle = {
         ...drawer,
         transform: anim ? "translateX(0)" : "translateX(-100%)",
         transition: "transform 260ms ease",
-    };
-
-    const invalidExtra = preview.payload.extra === "__INVALID_JSON__";
-    const canSend = !invalidExtra && (eventType !== "clicked" || !!deeplink);
-
-    const handleSendToWebHandler = async () => {
-        try {
-            window.postMessage(JSON.stringify(preview), "*");
-        } catch { }
     };
 
     const handleSaveToken = () => {
@@ -149,9 +109,43 @@ export default function PushModal({ isOpen, onClose }) {
         } catch { }
     };
 
+    // 📨 서버로 발송(Functions: sendPush) → 15초 후 실제 푸시 도착
+    async function callServerPush() {
+        if (!manualToken) {
+            alert("먼저 Manual Token(디바이스 토큰)을 입력하세요.");
+            return;
+        }
+        setSending(true);
+        try {
+            const resp = await fetch(`${FN_BASE}/sendPush`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    // "x-webpush-secret": SECRET, // (선택) 보안 헤더
+                },
+                body: JSON.stringify({
+                    token: manualToken.trim(),
+                    title: title || "Wizmarket 테스트",
+                    body: bodyText || "15초 후 전송됩니다. 창을 닫아도 됩니다.",
+                }),
+            });
+            const json = await resp.json();
+            if (!resp.ok) throw new Error(json?.error || "서버 오류");
+
+            alert("서버 접수 완료! 15초 후 실제 푸시가 발송됩니다.\n이제 창을 닫아주세요.");
+            // 필요 시 자동 닫기:
+            // onClose?.();
+        } catch (e) {
+            console.error(e);
+            alert(`발송 실패: ${e.message}`);
+        } finally {
+            setSending(false);
+        }
+    }
+
     return (
         <div style={panelStyle} onClick={(e) => e.stopPropagation()}>
-            <div style={header}>푸시 테스트 (토큰 수동 입력)</div>
+            <div style={header}>푸시 테스트 (서버 발송 · 15초 지연)</div>
 
             <div style={body}>
                 {/* 1) 수동 토큰 입력 */}
@@ -185,22 +179,8 @@ export default function PushModal({ isOpen, onClose }) {
                     </div>
                 </section>
 
-                {/* 2) 이벤트 시뮬레이터 입력 */}
+                {/* 2) 발송 내용 입력 */}
                 <section style={{ marginBottom: 8 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                        <div>
-                            <label style={label}>event</label>
-                            <select style={selectInput} value={eventType} onChange={(e) => setEventType(e.target.value)}>
-                                <option value="received">received</option>
-                                <option value="clicked">clicked</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label style={label}>messageId (선택)</label>
-                            <input style={input} value={messageId} onChange={(e) => setMessageId(e.target.value)} placeholder="중복 방지 식별자" />
-                        </div>
-                    </div>
-
                     <div style={{ marginTop: 12 }}>
                         <label style={label}>title</label>
                         <input style={input} value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -209,29 +189,16 @@ export default function PushModal({ isOpen, onClose }) {
                         <label style={label}>body</label>
                         <input style={input} value={bodyText} onChange={(e) => setBodyText(e.target.value)} />
                     </div>
-                    <div style={{ marginTop: 12 }}>
-                        <label style={label}>deeplink (clicked에는 권장/사실상 필수)</label>
-                        <input style={input} value={deeplink} onChange={(e) => setDeeplink(e.target.value)} placeholder="/jobs/12345" />
-                    </div>
-                    <div style={{ marginTop: 12 }}>
-                        <label style={label}>extra (JSON)</label>
-                        <textarea rows={4} style={{ ...input, fontFamily: "monospace" }} value={extra} onChange={(e) => setExtra(e.target.value)} />
-                        {invalidExtra && <div style={{ color: "#c20", fontSize: 12, marginTop: 6 }}>유효한 JSON이 아닙니다.</div>}
-                    </div>
-                    <div style={{ marginTop: 12 }}>
-                        <label style={label}>ts (epoch ms)</label>
-                        <input type="number" style={input} value={ts} onChange={(e) => setTs(Number(e.target.value) || 0)} />
-                    </div>
                 </section>
 
-                {/* 3) 보낼 메시지 미리보기 */}
+                {/* 3) 발송 미리보기 */}
                 <section style={{ marginTop: 8 }}>
-                    <div style={{ fontWeight: 600, marginBottom: 8 }}>보낼 메시지 (App→Web을 시뮬레이트)</div>
+                    <div style={{ fontWeight: 600, marginBottom: 8 }}>발송 미리보기</div>
                     <pre style={{ background: "#0f172a", color: "#e5e7eb", padding: 12, borderRadius: 8, fontSize: 12, overflowX: "auto", margin: 0 }}>
                         {JSON.stringify(preview, null, 2)}
                     </pre>
                     <div style={{ fontSize: 12, color: "#777", marginTop: 8 }}>
-                        * 실제 OS 푸시는 서버에서 발송합니다. 이 버튼은 <b>앱이 보냈다고 가정</b>하고 웹 핸들러에 주입하는 개발용 시뮬레이터입니다.
+                        * 버튼 클릭 시 서버에 요청되고, <b>15초 뒤</b> 실제 OS 푸시가 도착합니다. 요청 직후 이 창을 닫아도 됩니다.
                     </div>
                 </section>
             </div>
@@ -240,11 +207,11 @@ export default function PushModal({ isOpen, onClose }) {
                 <button style={btn} onClick={onClose}>닫기</button>
                 <button
                     style={primary}
-                    onClick={handleSendToWebHandler}
-                    disabled={!canSend}
-                    title={!canSend ? "extra JSON 오류 또는 clicked에는 deeplink 권장" : ""}
+                    onClick={callServerPush}
+                    disabled={!manualToken || sending}
+                    title={!manualToken ? "토큰 입력 필요" : ""}
                 >
-                    웹 핸들러로 주입(시뮬레이트)
+                    {sending ? "발송 대기…" : "서버로 발송(FCM, 15초 지연)"}
                 </button>
             </div>
         </div>
