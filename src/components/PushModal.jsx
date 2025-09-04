@@ -8,7 +8,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { addAppMessageListener } from "../bridges/appBridge";
 
 // ✅ 프로젝트 함수 URL (프로젝트 ID로 교체)
-const FN_BASE = "https://asia-northeast1-wizad-b69ee.cloudfunctions.net/sendPush";
+const FN_BASE = "https://asia-northeast1-wizad-b69ee.cloudfunctions.net";
 // (선택) Functions에 webpush.secret 설정했다면 헤더에 같이 전송
 // const SECRET = "SOME_SECRET";
 
