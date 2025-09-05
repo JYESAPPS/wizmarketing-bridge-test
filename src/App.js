@@ -164,7 +164,7 @@ export default function App() {
 
 
 
-        <CollapseSection id="sec-push" title="푸시 알람 테스트" defaultOpen={false}>
+        <CollapseSection id="sec-push" title="푸시 알람 테스트[검증완료]" defaultOpen={false}>
           <PushPage />
         </CollapseSection>
 

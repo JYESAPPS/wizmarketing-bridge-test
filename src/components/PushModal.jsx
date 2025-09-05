@@ -1,15 +1,14 @@
 /**
  * 파일명: components/PushModal.jsx
- * 설명: 푸시 알림 테스트 모달(UI). 디바이스 토큰을 입력하고
- *       Cloud Functions(sendPush)로 요청 → 서버가 15초 후 실제 푸시 발송.
+ * 설명: 디바이스 토큰을 입력하고 Cloud Functions(sendPush)로 요청 → 서버가 15초 후 실제 푸시 발송.
  */
 
 import React, { useEffect, useMemo, useState } from "react";
 import { addAppMessageListener } from "../bridges/appBridge";
 
-// ✅ 프로젝트 함수 URL (프로젝트 ID로 교체)
+// ✅ Functions 베이스 URL (프로젝트 ID만 교체)
 const FN_BASE = "https://asia-northeast1-wizad-b69ee.cloudfunctions.net";
-// (선택) Functions에 webpush.secret 설정했다면 헤더에 같이 전송
+// (선택) Functions에 webpush.secret 설정했다면 함께 전송
 // const SECRET = "SOME_SECRET";
 
 const drawer = {
@@ -40,7 +39,7 @@ const LS_PLATFORM = "push.manual_platform.v1";
 export default function PushModal({ isOpen, onClose }) {
     const [anim, setAnim] = useState(false);
 
-    // ✅ 수동 토큰만 사용
+    // ✅ 수동 토큰 (localStorage 유지)
     const [manualToken, setManualToken] = useState(() => {
         try { return localStorage.getItem(LS_TOKEN) || ""; } catch { return ""; }
     });
@@ -48,15 +47,15 @@ export default function PushModal({ isOpen, onClose }) {
         try { return localStorage.getItem(LS_PLATFORM) || "android"; } catch { return "android"; }
     });
 
-    // 앱에서 보내준 최신 PUSH_TOKEN(읽기 전용 표시용)
-    const [latestFromApp, setLatestFromApp] = useState(null); // { token, platform, app_version, ts, install_id }
+    // 앱에서 전달된 최신 PUSH_TOKEN(표시용)
+    const [latestFromApp, setLatestFromApp] = useState(null); // { token, platform, app_version, install_id, ts }
 
-    // 서버 발송에 쓰일 필드
+    // 발송 폼
     const [title, setTitle] = useState("새 알림");
     const [bodyText, setBodyText] = useState("Wizmarket에서 발송한 테스트 푸시입니다. (15초 지연)");
     const [sending, setSending] = useState(false);
 
-    // 🔁 애니메이션
+    // 애니메이션
     useEffect(() => {
         if (isOpen) {
             const t = setTimeout(() => setAnim(true), 10);
@@ -66,7 +65,7 @@ export default function PushModal({ isOpen, onClose }) {
         }
     }, [isOpen]);
 
-    // ✅ 앱에서 PUSH_TOKEN 수신
+    // App→Web: PUSH_TOKEN 수신
     useEffect(() => {
         const unbind = addAppMessageListener((msg, raw) => {
             if (!msg || typeof msg.type !== "string") return;
@@ -85,7 +84,7 @@ export default function PushModal({ isOpen, onClose }) {
         return () => unbind?.();
     }, []);
 
-    // 미리보기(설명용)
+    // 미리보기
     const preview = useMemo(() => ({
         token: manualToken || "(미입력)",
         title: title || "(제목없음)",
@@ -106,10 +105,21 @@ export default function PushModal({ isOpen, onClose }) {
         try {
             localStorage.setItem(LS_TOKEN, manualToken);
             localStorage.setItem(LS_PLATFORM, platform);
+            alert("저장 완료");
         } catch { }
     };
 
-    // 📨 서버로 발송(Functions: sendPush) → 15초 후 실제 푸시 도착
+    const handleUseLatestToken = () => {
+        if (latestFromApp?.token) {
+            setManualToken(latestFromApp.token);
+            try {
+                localStorage.setItem(LS_TOKEN, latestFromApp.token);
+                localStorage.setItem(LS_PLATFORM, latestFromApp.platform || platform);
+            } catch { }
+        }
+    };
+
+    // 📨 서버로 발송 (Functions: sendPush) → 15초 후 실제 푸시 도착
     async function callServerPush() {
         if (!manualToken) {
             alert("먼저 Manual Token(디바이스 토큰)을 입력하세요.");
@@ -152,7 +162,12 @@ export default function PushModal({ isOpen, onClose }) {
                 <section style={{ marginBottom: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                         <label style={{ ...label, marginBottom: 0 }}>Manual Token</label>
-                        <button style={subtle} onClick={handleSaveToken}>저장</button>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button style={subtle} onClick={handleUseLatestToken} disabled={!latestFromApp?.token}>
+                                최근 토큰 가져오기
+                            </button>
+                            <button style={subtle} onClick={handleSaveToken}>저장</button>
+                        </div>
                     </div>
                     <input
                         style={input}
