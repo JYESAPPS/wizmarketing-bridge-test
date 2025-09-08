@@ -168,7 +168,7 @@ export default function App() {
           <PushPage />
         </CollapseSection>
 
-        <CollapseSection id="sec-auth" title="로그인 테스트" defaultOpen={false}>
+        <CollapseSection id="sec-auth" title="로그인 테스트[검증완료]" defaultOpen={false}>
           <AuthPage />
         </CollapseSection>
 
