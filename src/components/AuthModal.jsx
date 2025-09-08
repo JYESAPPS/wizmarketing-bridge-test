@@ -5,7 +5,7 @@
  *       App → Web으로 SIGNIN_RESULT/SIGNOUT_RESULT 응답을 수신해 세션 상태를 확인한다.
  *
  * 주요 기능:
- * - 콤보박스로 type(START_SIGNIN/START_SIGNOUT)과 provider(kakao/google/apple/email) 선택
+ * - 콤보박스로 type(START_SIGNIN/START_SIGNOUT)과 provider(kakao/google) 선택
  * - 선택한 명령을 JSON Preview로 표시 후 [앱으로 전송] 버튼으로 postMessage 발송
  * - 현재 로그인 상태/세션 만료 시각/에러 상태를 상단 배지로 표시
  * - 로그인된 경우, 세션 정보를 JSON으로 하단에 출력
@@ -24,7 +24,6 @@
  * - Preview/전송 버튼 패턴은 다른 섹션 모달들과 일관되게 구성
  */
 
-
 import React, { useEffect, useMemo, useState } from "react";
 import { postToApp } from "../bridges/appBridge";
 
@@ -42,12 +41,16 @@ const btn = { padding: "10px 14px", borderRadius: 10, border: "1px solid #ddd", 
 const primary = { ...btn, background: "#222", color: "#fff", borderColor: "#222" };
 const badge = (ok) => ({ display: "inline-block", padding: "2px 8px", borderRadius: 999, background: ok ? "#e8f6ef" : "#f5f5f5", color: ok ? "#0a7" : "#777", fontSize: 12 });
 
+const PROVIDERS = [
+    { value: "google", label: "google" },
+    { value: "kakao", label: "kakao" },
+];
+
 export default function AuthModal({ isOpen, onClose, session, isAuthed, loading, error }) {
     const [anim, setAnim] = useState(false);
     const [cmd, setCmd] = useState("START_SIGNIN");     // START_SIGNIN | START_SIGNOUT
-    const [provider, setProvider] = useState("kakao");  // kakao | google | apple | email
+    const [provider, setProvider] = useState("google"); // google | apple | kakao
 
-    // 🔁 항상 호출되는 훅
     useEffect(() => {
         if (isOpen) {
             const t = setTimeout(() => setAnim(true), 10);
@@ -57,34 +60,56 @@ export default function AuthModal({ isOpen, onClose, session, isAuthed, loading,
         }
     }, [isOpen]);
 
-    // 🔁 항상 호출되는 훅
     const preview = useMemo(() => {
         return cmd === "START_SIGNOUT"
             ? { type: "START_SIGNOUT" }
             : { type: "START_SIGNIN", payload: { provider } };
     }, [cmd, provider]);
 
-    const handleSend = () => { postToApp(preview); };
+    const handleSend = () => {
+        if (cmd === "START_SIGNIN" && provider === "kakao") {
+            const ok = window.confirm(
+                "카카오톡 로그인을 사용하려면 고객사 인증키(REST API 키/Redirect URI) 확인이 필요합니다.\n" +
+                "담당자에게 인증키 확인 후 알려주시겠어요?"
+            );
+            if (!ok) return;
+        }
 
-    // ⛔️ 여기서 조건부로 컴포넌트 자체 return null
+        // 👉 보낸 메시지를 로그에도 남기기
+        window.dispatchEvent(
+            new MessageEvent("message", {
+                data: JSON.stringify({
+                    type: "SEND_DEBUG",
+                    payload: preview,
+                }),
+            })
+        );
+
+        // 실제 앱으로 전송
+        postToApp(preview);
+    };
+
     if (!isOpen) return null;
 
     const panelStyle = {
         ...drawer,
         transform: anim ? "translateX(0)" : "translateX(-100%)",
-        transition: "transform 260ms ease"
+        transition: "transform 260ms ease",
     };
 
     return (
         <div style={panelStyle} onClick={(e) => e.stopPropagation()}>
             <div style={header}>로그인/로그아웃 테스트</div>
             <div style={body}>
-
                 {/* 상태 배지 */}
                 <section style={{ marginBottom: 12 }}>
-                    <span style={badge(isAuthed)}>{isAuthed ? `로그인됨: ${session?.user?.nickname || session?.user?.id || "user"}` : "로그아웃"}</span>
+                    <span style={badge(isAuthed)}>
+                        {isAuthed ? `로그인됨: ${session?.user?.nickname || session?.user?.id || "user"}` : "로그아웃"}
+                    </span>
                     {session?.expires_at && (
-                        <span style={{ ...badge(true), marginLeft: 8 }}>만료: {new Date(session.expires_at).toLocaleTimeString()}</span>
+                        <span style={{ ...badge(true), marginLeft: 8 }}>
+                            만료: {new Date(session.expires_at).toLocaleTimeString()}
+                        </span>
                     )}
                     {loading && <span style={{ marginLeft: 8, fontSize: 12, color: "#555" }}>진행 중...</span>}
                     {error && <span style={{ marginLeft: 8, fontSize: 12, color: "#c20" }}>{String(error)}</span>}
@@ -101,11 +126,15 @@ export default function AuthModal({ isOpen, onClose, session, isAuthed, loading,
                     </div>
                     <div>
                         <label style={label}>provider</label>
-                        <select style={selectInput} value={provider} onChange={(e) => setProvider(e.target.value)} disabled={cmd === "START_SIGNOUT"}>
-                            <option value="kakao">kakao</option>
-                            <option value="google">google</option>
-                            <option value="apple">apple</option>
-                            <option value="email">email</option>
+                        <select
+                            style={selectInput}
+                            value={provider}
+                            onChange={(e) => setProvider(e.target.value)}
+                            disabled={cmd === "START_SIGNOUT"}
+                        >
+                            {PROVIDERS.map(p => (
+                                <option key={p.value} value={p.value}>{p.label}</option>
+                            ))}
                         </select>
                     </div>
                 </section>

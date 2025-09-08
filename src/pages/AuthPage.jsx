@@ -32,7 +32,10 @@ import LogBox from "../components/LogBox";
 
 export default function AuthPage() {
 
-    const { logs, clear } = useSectionLog(["SIGNIN_RESULT", "SIGNOUT_RESULT"], 200);
+    const { logs, clear } = useSectionLog(
+        ["SIGNIN_RESULT", "SIGNOUT_RESULT", "SEND_DEBUG"],
+        200
+    );
 
     const [open, setOpen] = useState(false);
     const { session, isAuthed, loading, error } = useAuth(); // 훅만 붙이면 모달 안에서 전송/수신 모두 작동
