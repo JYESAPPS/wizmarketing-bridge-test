@@ -67,13 +67,6 @@ export default function AuthModal({ isOpen, onClose, session, isAuthed, loading,
     }, [cmd, provider]);
 
     const handleSend = () => {
-        if (cmd === "START_SIGNIN" && provider === "kakao") {
-            const ok = window.confirm(
-                "카카오톡 로그인을 사용하려면 고객사 인증키(REST API 키/Redirect URI) 확인이 필요합니다.\n" +
-                "담당자에게 인증키 확인 후 알려주시겠어요?"
-            );
-            if (!ok) return;
-        }
 
         // 👉 보낸 메시지를 로그에도 남기기
         window.dispatchEvent(

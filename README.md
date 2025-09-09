@@ -68,3 +68,18 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+
+
+# 변경된 파일 확인
+git status
+
+# 모든 변경 사항 스테이징
+git add .
+
+# 커밋 (메시지는 상황에 맞게)
+git commit -m "feat(auth): 구글/카카오 로그인 브리지 구현 및 AuthModal 정리"
+
+# 원격 main 브랜치로 푸시
+git push origin main
+
