@@ -39,6 +39,7 @@ import SharePage from "./pages/SharePage";             // ✅ 추가
 
 // 공용
 import CollapseSection from "./components/CollapseSection";
+import DownloadPage from "./pages/DownloadPage";
 
 // ✅ 허용 메시지 목록(종합 로그/핸들링용)
 const ALLOWED_TYPES = new Set([
@@ -56,6 +57,7 @@ const ALLOWED_TYPES = new Set([
   "WEB_READY_ACK",
   "WEB_ERROR_ACK",
   "SHARE_RESULT",                      // ✅ 공유 결과 수신
+  "DOWNLOAD_RESULT",   // ✅ RN → Web 다운로드 결과 로그 받을 수 있게
 ]);
 
 export default function App() {
@@ -176,6 +178,12 @@ export default function App() {
         <CollapseSection id="sec-share" title="공유(인스타 등) 테스트" defaultOpen={false}>
           <SharePage />
         </CollapseSection>
+
+
+        <CollapseSection id="sec-download" title="이미지 다운로드 테스트" defaultOpen={false}>
+          <DownloadPage />
+        </CollapseSection>
+        
       </div>
 
       {/* <h2 style={{ marginTop: 20 }}>종합 로그</h2>
