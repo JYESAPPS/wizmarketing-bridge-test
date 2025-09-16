@@ -175,12 +175,12 @@ export default function App() {
         </CollapseSection>
 
   
-        <CollapseSection id="sec-share" title="공유(인스타 등) 테스트" defaultOpen={false}>
+        <CollapseSection id="sec-share" title="공유(인스타 등) 테스트[검증완료]" defaultOpen={false}>
           <SharePage />
         </CollapseSection>
 
 
-        <CollapseSection id="sec-download" title="이미지 다운로드 테스트" defaultOpen={false}>
+        <CollapseSection id="sec-download" title="이미지 다운로드 테스트[검증완료]" defaultOpen={false}>
           <DownloadPage />
         </CollapseSection>
         

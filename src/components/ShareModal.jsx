@@ -22,7 +22,7 @@ const SOCIAL_MAP_WEB2RN = {
     twitter: "TWITTER",
     sms: "SMS",
     kakao: "KAKAO",
-    naver: "NAVER",
+    band: "BAND",
     system: "SYSTEM",
 };
 
@@ -188,9 +188,10 @@ export default function ShareModal({
                         <option value="instagram_stories">instagram_stories</option>
                         <option value="facebook">facebook</option>
                         <option value="twitter">twitter (X)</option>
+                        <option value="x">x (alias)</option>
+                        <option value="band">band</option>
                         <option value="sms">sms</option>
                         <option value="kakao">kakao</option>
-                        <option value="naver">naver</option>
                         <option value="system">system (OS 공유 시트)</option>
                     </select>
                     {errors.platform && <div style={err}>{errors.platform}</div>}
