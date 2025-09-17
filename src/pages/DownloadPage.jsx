@@ -81,6 +81,7 @@ export default function DownloadPage() {
                     background: "#2b6fff",
                     color: "#fff",
                     fontWeight: 600,
+                    marginTop: 8,
                     cursor: "pointer",
                 }}
             >
