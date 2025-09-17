@@ -44,6 +44,7 @@ const badge = (ok) => ({ display: "inline-block", padding: "2px 8px", borderRadi
 const PROVIDERS = [
     { value: "google", label: "google" },
     { value: "kakao", label: "kakao" },
+    { value: "naver", label: "naver" },
 ];
 
 export default function AuthModal({ isOpen, onClose, session, isAuthed, loading, error }) {
@@ -61,9 +62,22 @@ export default function AuthModal({ isOpen, onClose, session, isAuthed, loading,
     }, [isOpen]);
 
     const preview = useMemo(() => {
-        return cmd === "START_SIGNOUT"
-            ? { type: "START_SIGNOUT" }
-            : { type: "START_SIGNIN", payload: { provider } };
+        if (cmd === "START_SIGNOUT") return { type: "START_SIGNOUT" };
+        if (provider === "naver") {
+            const state = crypto.randomUUID();                 // CSRF 방지
+            sessionStorage.setItem("naver_oauth_state", state);
+            const redirectUri = new URL('/', window.location.origin).toString(); 
+
+            return {
+                type: "START_SIGNIN",
+                payload: {
+                    provider: "naver",
+                    redirectUri: redirectUri,           // ✅ 라우팅 없이 “현재 페이지”로 콜백
+                    state,
+                },
+            };
+        }
+        return { type: "START_SIGNIN", payload: { provider } };
     }, [cmd, provider]);
 
     const handleSend = () => {

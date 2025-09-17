@@ -59,6 +59,7 @@ const ALLOWED_TYPES = new Set([
   "SHARE_RESULT",                      // ✅ 공유 결과 수신
   "DOWNLOAD_RESULT",   // ✅ RN → Web 다운로드 결과 로그 받을 수 있게
 ]);
+const parseQS = () => new URLSearchParams(window.location.search);
 
 export default function App() {
   const [logs, setLogs] = useState([]);
@@ -69,6 +70,8 @@ export default function App() {
       }`;
     setLogs((prev) => [...prev.slice(-499), line]);
   };
+  const b64 = (s) => window.btoa(unescape(encodeURIComponent(s)));
+  const mkBlob = (o) => b64(JSON.stringify(o));
 
   // 메시지 요약 변환기(종합 로그용)
   const summarize = (msg) => {
@@ -141,6 +144,105 @@ export default function App() {
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [logs]);
+
+
+  // ✅ 네이버 콜백 처리 (App.jsx 안, useEffect 내부)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const code = q.get("code");
+    const state = q.get("state");
+    const err = q.get("error");
+    if (!code && !err) return; // 콜백 아님
+
+    (async () => {
+      if (err) {
+        console.error("[NAVER_CALLBACK] 에러 쿼리", err);
+        postToApp({
+          type: "NAVER_LOGIN_DONE",
+          payload: { success: false, error: `naver_error:${err}` },
+        });
+        window.history.replaceState({}, "", window.location.pathname);
+        return;
+      }
+
+      try {
+        // CSRF 체크
+        const saved = sessionStorage.getItem("naver_oauth_state");
+        console.log("[NAVER_CALLBACK] state check", { fromQuery: state, saved });
+        if (!state || saved !== state) throw new Error("state_mismatch");
+
+     
+   
+        const FUNCTION_URL ="https://asia-northeast1-wizad-b69ee.cloudfunctions.net/naverExchange"
+        
+
+        // 🔐 교환 호출
+        const resp = await fetch(FUNCTION_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, state, redirect_uri: window.location.origin + "/" }),
+        });
+
+        // 안전 파싱
+        const status = resp.status;
+        let bodyJson = null;
+        let bodyText = "";
+        try {
+          bodyJson = await resp.json();
+        } catch {
+          try {
+            bodyText = await resp.text();
+          } catch { }
+        }
+
+   
+
+        // 성공/실패 분기
+        if (!resp.ok || !bodyJson?.success) {
+          const msg = bodyJson?.message || bodyText || "exchange_failed";
+          console.warn("[NAVER_CALLBACK] 교환 실패", { status, msg });
+          postToApp({
+            type: "NAVER_LOGIN_DONE",
+            payload: { success: false, error: `exchange_failed_${status}:${msg}` },
+          });
+          window.history.replaceState({}, "", window.location.pathname);
+          return;
+        }
+
+        // ✅ 성공
+        console.log("[NAVER_CALLBACK] 교환 성공", bodyJson.profile);
+
+        const { id, name, email } = bodyJson.profile || {};
+        alert(
+          `네이버 로그인 성공 🎉\n\n` +
+          `ID: ${id || "-"}\n` +
+          `이름: ${name || "-"}\n` +
+          `이메일: ${email || "-"}`
+        );
+        
+        postToApp({
+          type: "NAVER_LOGIN_DONE",
+          payload: {
+            success: true,
+            profile: bodyJson.profile || null,
+          },
+        });
+      } catch (e) {
+        console.error("[NAVER_CALLBACK] 예외 발생", e);
+        postToApp({
+          type: "NAVER_LOGIN_DONE",
+          payload: { success: false, error: String(e?.message || e) },
+        });
+      } finally {
+        // URL 정리
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    })();
+  }, []);
+
+
+
+
 
   return (
     <div className="wrap">
