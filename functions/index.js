@@ -4,6 +4,6 @@
 // functions/index.js
 exports.sendPush = require("./push").sendPush;
 exports.naverExchange = require("./naver").naverExchange;
-
+exports.naverBlogPost = require("./post").naverBlogPost;
 
 

@@ -23,6 +23,7 @@ const SOCIAL_MAP_WEB2RN = {
     sms: "SMS",
     kakao: "KAKAO",
     band: "BAND",
+    blog:"blog",
     system: "SYSTEM",
 };
 
@@ -47,6 +48,52 @@ export default function ShareModal({
     const [anim, setAnim] = useState(false);
     const [result, setResult] = useState(null);
 
+
+    useEffect(() => {
+        function handleMessage(e) {
+            try {
+                const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+                if (!data?.type) return;
+
+                // ✅ 기존: 공유 결과 수신
+                if (data.type === "SHARE_RESULT") {
+                    setResult(data);
+                    onResult?.(data);
+                    return;
+                }
+
+                // ✅ 핵심: 블로그 업로드 초안 도착 → 무조건 로그인 시작 요청
+                if (data.type === "NAVER_BLOG_CAN_POST") {
+                    const draft = data.payload?.data || {};
+                    const state = Math.random().toString(36).slice(2);
+
+                    // 콜백 페이지에서 쓸 임시 저장
+                    sessionStorage.setItem("naver_draft", JSON.stringify(draft));
+                    sessionStorage.setItem("naver_state", state);
+
+                    onClose?.();
+
+                    // ✅ 2) 살짝 딜레이 후 라우팅 (닫힘 애니메이션 고려)
+                    setTimeout(() => {
+                        // (A) 라우터 없이: 풀 리로드
+                        window.location.href = "/auth/naver/cb2/";
+                        // (B) react-router 사용 시:
+                        // navigate("/auth/naver/cb2/");
+                    }, 120);
+                    return;
+                }
+            } catch { }
+        }
+
+        window.addEventListener("message", handleMessage);
+        document.addEventListener("message", handleMessage);
+        return () => {
+            window.removeEventListener("message", handleMessage);
+            document.removeEventListener("message", handleMessage);
+        };
+    }, [onResult]);
+
+
     useEffect(() => {
         if (!isOpen) return;
         const t = setTimeout(() => setAnim(true), 10);
@@ -61,23 +108,7 @@ export default function ShareModal({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
-    useEffect(() => {
-        function handleMessage(e) {
-            try {
-                const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
-                if (data?.type === "SHARE_RESULT") {
-                    setResult(data);
-                    onResult?.(data);
-                }
-            } catch { }
-        }
-        window.addEventListener("message", handleMessage);
-        document.addEventListener("message", handleMessage);
-        return () => {
-            window.removeEventListener("message", handleMessage);
-            document.removeEventListener("message", handleMessage);
-        };
-    }, [onResult]);
+
 
     const preview = useMemo(() => {
         const social = SOCIAL_MAP_WEB2RN[form.platform] || "SYSTEM";
@@ -190,6 +221,7 @@ export default function ShareModal({
                         <option value="twitter">twitter (X)</option>
                         <option value="x">x (alias)</option>
                         <option value="band">band</option>
+                        <option value="blog">blog</option>
                         <option value="sms">sms</option>
                         <option value="kakao">kakao</option>
                         <option value="system">system (OS 공유 시트)</option>

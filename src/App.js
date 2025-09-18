@@ -219,7 +219,7 @@ export default function App() {
           `이름: ${name || "-"}\n` +
           `이메일: ${email || "-"}`
         );
-        
+
         postToApp({
           type: "NAVER_LOGIN_DONE",
           payload: {
@@ -246,7 +246,7 @@ export default function App() {
 
   return (
     <div className="wrap">
-      <h1>WizMarketing(CRA)</h1>
+      <h1>WizMarketing (CRA)</h1>
 
 
       <div className="grid">
